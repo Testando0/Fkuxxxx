@@ -1,5 +1,4 @@
-// O dotenv deve ser a PRIMEIRA coisa do código
-require('dotenv').config(); 
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 
@@ -7,44 +6,41 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-const HF_TOKEN = process.env.HF_TOKEN;
-const MODEL_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell";
-
-// Log para você conferir no painel do Render se o token carregou
-if (!HF_TOKEN) {
-    console.error("ERRO CRÍTICO: Variável HF_TOKEN não encontrada! Verifique o painel do Render.");
-} else {
-    console.log("Token carregado com sucesso: ", HF_TOKEN.substring(0, 5) + "...");
-}
+const HF_TOKEN = process.env.HF_TOKEN ? process.env.HF_TOKEN.trim() : "";
+// URL ATUALIZADA PARA O ROUTER
+const MODEL_URL = "https://router.huggingface.co/black-forest-labs/FLUX.1-schnell";
 
 app.post('/generate', async (req, res) => {
+    if (!HF_TOKEN) {
+        return res.status(500).json({ error: "Token não configurado no Render." });
+    }
+
     try {
-        const response = await fetch(MODEL_URL, {
+        const hfResponse = await fetch(MODEL_URL, {
             headers: {
-                "Authorization": `Bearer ${HF_TOKEN.trim()}`,
+                "Authorization": `Bearer ${HF_TOKEN}`,
                 "Content-Type": "application/json",
-                "x-use-cache": "false" // Força uma nova geração
             },
             method: "POST",
             body: JSON.stringify({ 
                 inputs: req.body.prompt,
-                parameters: { "wait_for_model": true } // Faz a API esperar o modelo carregar
+                parameters: { "wait_for_model": true } 
             }),
         });
 
-        if (!response.ok) {
-            const errorData = await response.text();
-            console.error("Resposta do HF:", errorData);
-            return res.status(response.status).send(errorData);
+        if (!hfResponse.ok) {
+            const errorMsg = await hfResponse.text();
+            console.error("Erro do HF:", errorMsg);
+            return res.status(hfResponse.status).json({ error: errorMsg });
         }
 
-        const buffer = Buffer.from(await response.arrayBuffer());
+        const buffer = Buffer.from(await hfResponse.arrayBuffer());
         res.set('Content-Type', 'image/png');
         res.send(buffer);
 
     } catch (error) {
-        console.error("Erro no Servidor:", error);
-        res.status(500).send("Erro interno no servidor");
+        console.error("Erro de conexão:", error);
+        res.status(500).json({ error: "Erro de conexão no servidor." });
     }
 });
 
