@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flux AI Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-black text-white flex flex-col items-center justify-center min-h-screen p-5">
+
+    <div class="max-w-md w-full space-y-5">
+        <h1 class="text-4xl font-black text-center text-yellow-500">FLUX.1 JS</h1>
+        
+        <textarea id="prompt" class="w-full p-4 bg-gray-900 border border-gray-700 rounded-xl focus:ring-2 focus:ring-yellow-500 outline-none" rows="4" placeholder="Descreva a imagem em inglês..."></textarea>
+        
+        <button id="genBtn" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl transition-all disabled:opacity-50">
+            GERAR IMAGEM
+        </button>
+
+        <div id="status" class="hidden text-center text-gray-400 animate-pulse">Processando no Hugging Face...</div>
+
+        <div id="result" class="hidden space-y-4">
+            <img id="outImg" class="w-full rounded-xl border-4 border-gray-800 shadow-2xl" src="" alt="Gerada">
+            <a id="dlBtn" download="image.png" class="block text-center bg-gray-800 py-2 rounded-lg text-sm">Baixar Imagem</a>
+        </div>
+    </div>
+
+    <script>
+        const btn = document.getElementById('genBtn');
+        const promptInput = document.getElementById('prompt');
+        const status = document.getElementById('status');
+        const result = document.getElementById('result');
+        const outImg = document.getElementById('outImg');
+        const dlBtn = document.getElementById('dlBtn');
+
+        btn.onclick = async () => {
+            if(!promptInput.value) return alert("Digite algo!");
+
+            btn.disabled = true;
+            status.classList.remove('hidden');
+            result.classList.add('hidden');
+
+            try {
+                const res = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: promptInput.value })
+                });
+
+                if(!res.ok) throw new Error("Erro na API");
+
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                
+                outImg.src = url;
+                dlBtn.href = url;
+                result.classList.remove('hidden');
+            } catch (e) {
+                alert("Falha: Verifique se o seu HF_TOKEN está correto no Render.");
+            } finally {
+                btn.disabled = false;
+                status.classList.add('hidden');
+            }
+        };
+    </script>
+</body>
+</html>
