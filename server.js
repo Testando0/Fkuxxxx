@@ -4,13 +4,18 @@ const path = require('path');
 
 const app = express();
 app.use(express.json());
-app.use(express.static(__dirname));
 
-const HF_TOKEN = process.env.HF_TOKEN ? process.env.HF_TOKEN.trim() : "";
-// SDXL-Turbo é o modelo mais rápido e menos disputado no Router
-const MODEL_URL = "https://router.huggingface.co/stabilityai/sdxl-turbo";
+// Força o Express a servir o index.html na raiz
+app.use(express.static(path.join(__dirname)));
 
+// Rota de teste para saber se o servidor está vivo
+app.get('/health', (req, res) => res.send("Servidor OK"));
+
+// ROTA PRINCIPAL (Certifique-se que o fetch no HTML aponta exatamente para /generate)
 app.post('/generate', async (req, res) => {
+    const HF_TOKEN = process.env.HF_TOKEN ? process.env.HF_TOKEN.trim() : "";
+    const MODEL_URL = "https://router.huggingface.co/stabilityai/sdxl-turbo";
+
     if (!HF_TOKEN) return res.status(500).json({ error: "Token faltando no Render!" });
 
     try {
@@ -31,13 +36,13 @@ app.post('/generate', async (req, res) => {
             return res.status(response.status).json({ error: errText });
         }
 
-        const buffer = Buffer.from(await response.arrayBuffer());
+        const arrayBuffer = await response.arrayBuffer();
         res.set('Content-Type', 'image/png');
-        res.send(buffer);
+        res.send(Buffer.from(arrayBuffer));
     } catch (e) {
-        res.status(500).json({ error: "Servidor instável, tente novamente." });
+        res.status(500).json({ error: "Erro interno: " + e.message });
     }
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Online na porta ${PORT}`));
+app.listen(PORT, () => console.log(`Rodando na porta ${PORT}`));
