@@ -7,13 +7,12 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
 const HF_TOKEN = process.env.HF_TOKEN ? process.env.HF_TOKEN.trim() : "";
-// URL ATUALIZADA PARA O ROUTER
-const MODEL_URL = "https://router.huggingface.co/black-forest-labs/FLUX.1-schnell";
+
+// URL USANDO O ROUTER OFICIAL (Melhor para fidelidade e pouca fila)
+const MODEL_URL = "https://router.huggingface.co/ByteDance/SDXL-Lightning";
 
 app.post('/generate', async (req, res) => {
-    if (!HF_TOKEN) {
-        return res.status(500).json({ error: "Token não configurado no Render." });
-    }
+    if (!HF_TOKEN) return res.status(500).json({ error: "HF_TOKEN não configurado no Render." });
 
     try {
         const hfResponse = await fetch(MODEL_URL, {
@@ -24,14 +23,15 @@ app.post('/generate', async (req, res) => {
             method: "POST",
             body: JSON.stringify({ 
                 inputs: req.body.prompt,
+                // O Router gerencia a fila automaticamente com este parâmetro
                 parameters: { "wait_for_model": true } 
             }),
         });
 
         if (!hfResponse.ok) {
-            const errorMsg = await hfResponse.text();
-            console.error("Erro do HF:", errorMsg);
-            return res.status(hfResponse.status).json({ error: errorMsg });
+            const errorData = await hfResponse.json();
+            console.error("Erro do Router:", errorData);
+            return res.status(hfResponse.status).json({ error: errorData.error || "Erro no Hugging Face" });
         }
 
         const buffer = Buffer.from(await hfResponse.arrayBuffer());
@@ -39,10 +39,10 @@ app.post('/generate', async (req, res) => {
         res.send(buffer);
 
     } catch (error) {
-        console.error("Erro de conexão:", error);
-        res.status(500).json({ error: "Erro de conexão no servidor." });
+        console.error("Erro no Servidor:", error);
+        res.status(500).json({ error: "Falha na comunicação com o servidor." });
     }
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`Rodando com Router na porta ${PORT}`));
