@@ -3,72 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flux AI Generator</title>
+    <title>AI Vision - Lightning Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); }
+        .loader { border-top-color: #fbbf24; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
 </head>
-<body class="bg-black text-white flex flex-col items-center justify-center min-h-screen p-5">
+<body class="bg-[#0a0a0a] text-white min-h-screen flex flex-col items-center py-10 px-4">
 
-    <div class="max-w-md w-full space-y-5">
-        <h1 class="text-4xl font-black text-center text-yellow-500">FLUX.1 2026</h1>
+    <header class="text-center mb-10">
+        <h1 class="text-5xl font-900 tracking-tighter bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
+            LIGHTNING AI
+        </h1>
+        <p class="text-gray-400 mt-2">Fiel ao prompt • Via Hugging Face Router</p>
+    </header>
+
+    <main class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8">
         
-        <textarea id="prompt" class="w-full p-4 bg-gray-900 border border-gray-700 rounded-xl focus:ring-2 focus:ring-yellow-500 outline-none" rows="4" placeholder="Descreva a imagem em inglês..."></textarea>
-        
-        <button id="genBtn" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl transition-all disabled:opacity-50">
-            GERAR IMAGEM
-        </button>
+        <div class="space-y-6">
+            <div class="glass p-6 rounded-3xl border border-white/10">
+                <label class="block text-sm font-medium text-gray-400 mb-2">O que você quer criar?</label>
+                <textarea id="prompt" 
+                    class="w-full h-32 bg-black/40 border border-white/10 rounded-2xl p-4 focus:ring-2 focus:ring-yellow-500 outline-none transition-all resize-none text-sm"
+                    placeholder="Ex: Realistic portrait of a cyberpunk warrior, neon lighting, 8k, detailed skin texture..."></textarea>
+                
+                <button id="genBtn" 
+                    class="w-full mt-4 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-4 rounded-2xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                    GERAR IMAGEM
+                </button>
+            </div>
 
-        <div id="status" class="hidden text-center text-gray-400">Gerando... Isso pode levar 20 segundos.</div>
-
-        <div id="result" class="hidden space-y-4">
-            <img id="outImg" class="w-full rounded-xl border-4 border-gray-800 shadow-2xl" src="">
-            <a id="dlBtn" download="flux_image.png" class="block text-center bg-gray-800 py-2 rounded-lg text-sm cursor-pointer">Baixar Imagem</a>
+            <div id="statusContainer" class="hidden glass p-6 rounded-3xl border border-white/10 flex flex-col items-center">
+                <div class="loader w-8 h-8 border-4 border-white/20 rounded-full mb-3"></div>
+                <p id="statusText" class="text-sm text-yellow-500 font-medium">O Router está processando...</p>
+            </div>
         </div>
-    </div>
+
+        <div class="space-y-6">
+            <div id="mainResult" class="hidden relative group">
+                <img id="outImg" class="w-full aspect-square object-cover rounded-3xl border border-white/10 shadow-2xl" src="" alt="Gerada">
+                <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl flex items-center justify-center">
+                    <a id="dlBtn" download="ai_vision.png" class="bg-white text-black px-6 py-2 rounded-full font-bold text-sm">Download PNG</a>
+                </div>
+            </div>
+
+            <div class="glass p-6 rounded-3xl border border-white/10">
+                <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Geradas Recentemente</h2>
+                <div id="gallery" class="grid grid-cols-3 gap-2">
+                    <div class="aspect-square bg-white/5 rounded-lg border border-dashed border-white/10 flex items-center justify-center text-[10px] text-gray-600">Vazio</div>
+                    <div class="aspect-square bg-white/5 rounded-lg border border-dashed border-white/10"></div>
+                    <div class="aspect-square bg-white/5 rounded-lg border border-dashed border-white/10"></div>
+                </div>
+            </div>
+        </div>
+    </main>
 
     <script>
         const btn = document.getElementById('genBtn');
         const promptInput = document.getElementById('prompt');
-        const status = document.getElementById('status');
-        const result = document.getElementById('result');
+        const statusContainer = document.getElementById('statusContainer');
+        const mainResult = document.getElementById('mainResult');
         const outImg = document.getElementById('outImg');
         const dlBtn = document.getElementById('dlBtn');
+        const gallery = document.getElementById('gallery');
 
         btn.onclick = async () => {
             const prompt = promptInput.value.trim();
-            if(!prompt) return alert("Digite um prompt!");
+            if(!prompt) return alert("Por favor, descreva a imagem.");
 
+            // Reset UI
             btn.disabled = true;
-            status.classList.remove('hidden');
-            result.classList.add('hidden');
-
+            statusContainer.classList.remove('hidden');
+            
             try {
                 const response = await fetch('/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: prompt })
+                    body: JSON.stringify({ prompt })
                 });
 
                 if (!response.ok) {
-                    // Se o erro for do token ou da API, ele vem como JSON
                     const errorData = await response.json();
-                    throw new Error(errorData.error || "Erro desconhecido");
+                    throw new Error(errorData.error || "Erro desconhecido no Router");
                 }
 
-                // Se deu certo, a resposta é a própria imagem (blob)
                 const blob = await response.blob();
                 const url = URL.createObjectURL(blob);
                 
+                // Mostrar Resultado Principal
                 outImg.src = url;
                 dlBtn.href = url;
-                result.classList.remove('hidden');
+                mainResult.classList.remove('hidden');
+
+                // Adicionar à Galeria
+                addToGallery(url);
+
             } catch (e) {
-                console.error(e);
-                alert("ERRO: " + e.message);
+                alert("Falha no Hugging Face Router: " + e.message);
             } finally {
                 btn.disabled = false;
-                status.classList.add('hidden');
+                statusContainer.classList.add('hidden');
             }
         };
+
+        function addToGallery(url) {
+            const div = document.createElement('div');
+            div.className = "aspect-square cursor-pointer overflow-hidden rounded-lg border border-white/10 hover:border-yellow-500 transition-all";
+            div.innerHTML = `<img src="${url}" class="w-full h-full object-cover" onclick="outImg.src='${url}'; dlBtn.href='${url}';">`;
+            
+            if(gallery.innerText === "Vazio") gallery.innerHTML = "";
+            gallery.prepend(div);
+            
+            // Limita a 6 imagens na galeria visual
+            if(gallery.children.length > 6) gallery.lastChild.remove();
+        }
     </script>
 </body>
 </html>
